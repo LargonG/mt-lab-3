@@ -6,7 +6,7 @@ grammar Haskell;
 
 prog: NEWLINE* (NEWLINE* function_declaration)* EOF;
 
-function_declaration: name (function_header | function_body) NEWLINE;
+function_declaration: name (function_header | function_body) NEWLINE?;
 
 function_header: '::' function_header_args;
 function_header_args: (type '->')* type;
