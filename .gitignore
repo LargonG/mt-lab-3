@@ -43,4 +43,5 @@ bin/
 
 ### Custom ###
 .idea/
-prog.fl
+prog.hs
+main.js

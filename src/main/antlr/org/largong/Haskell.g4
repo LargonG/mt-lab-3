@@ -1,4 +1,8 @@
-grammar FL;
+grammar Haskell;
+
+@header {
+    package org.largong;
+}
 
 prog: NEWLINE* (NEWLINE* function_declaration)* EOF;
 
@@ -7,21 +11,23 @@ function_declaration: name (function_header | function_body) NEWLINE;
 function_header: '::' function_header_args;
 function_header_args: (type '->')* type;
 
-function_body: function_body_args ('|' logic)? '=' expression;
+function_body: function_body_args function_body_condition? '=' expression;
 function_body_args: arg*;
 
+function_body_condition: '|' expression;
+
 type: NAME | '[' type ']';
-name: ANY_NAME | NAME;
-value: CONST | NUMBER | STRING | CHAR | BOOL | name;
-expression: ('(' expression ')' | value)+ | if_statement | arith | logic;
+name: NAME;
+value: CONST | number | STRING | CHAR | BOOL;
+number: NUMBER;
+expression: ('(' expression ')' | name | value)+ | if_statement | arith | logic;
 arg: name | value;
 
 arith:    arith ('*'|'/'|'%') arith
         | arith ('+'|'-') arith
         | '(' expression ')'
-        | (name | NUMBER)
+        | (name | number)
         ;
-val: '(' arith ')' | (name | NUMBER);
 
 logic:    logic '&&' logic
         | logic '||' logic
@@ -30,7 +36,7 @@ logic:    logic '&&' logic
         ;
 
 logic_compare_operator: '<' | '>' | '<=' | '>=' | '==';
-logic_expression: '(' expression ')' | value | arith;
+logic_expression: '(' expression ')' | name | value | arith;
 
 if_statement: 'if' expression 'then' expression 'else' expression;
 
@@ -50,13 +56,23 @@ if_statement: 'if' expression 'then' expression 'else' expression;
     Также должны быть возможны suffix operations
 */
 
-COMMENT: ('/*' .*? '*/' | '//' .*? NEWLINE) -> channel(HIDDEN);
-CHAR: '\'' (~['] | '\\\'' | '\\n' | '\\r' | '\\t') '\'';
-STRING: '"' (~["] | '\\"')* '"';
-ANY_NAME: '`' ~[`]+ '`';
+fragment BS: '\\';
+fragment QUAT: '\'';
+fragment DQUAT: '"';
+fragment HQUAT: '`';
+fragment SPEC_SYMBOLS: (BS 'n' | BS 'r' | BS 't' | BS BS);
+fragment NATURAL: [1-9];
+fragment DIGIT: [0-9];
+fragment LETTER: [a-zA-Z_];
+fragment LETTER_OR_DIGIT: (LETTER | DIGIT);
+
+COMMENT: '--' .*? NEWLINE -> channel(HIDDEN);
+CHAR: QUAT (BS QUAT | SPEC_SYMBOLS | ~['\\]) QUAT;
+STRING: DQUAT (BS DQUAT | SPEC_SYMBOLS | ~["\\])* DQUAT;
+ANY_NAME: HQUAT ~[`]+ HQUAT;
 CONST: 'undefined' | 'null';
 BOOL: 'true' | 'false';
-NUMBER: [1-9][0-9]*('.'[0-9]*)? | [0];
-NAME: [a-zA-Z_][a-zA-Z0-9_]*;
+NUMBER: (NATURAL DIGIT* | '0') ('.'DIGIT*)?;
+NAME: LETTER LETTER_OR_DIGIT*;
 WHITESPACE: (' ' | '\t') -> skip;
 NEWLINE: [\r\n]+;
