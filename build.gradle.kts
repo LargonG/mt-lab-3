@@ -26,16 +26,10 @@ tasks.test {
 tasks.compileKotlin {
     dependsOn("generateGrammarSource")
 }
-kotlin {
-    jvmToolchain(21)
-}
-
-repositories {
-    mavenCentral()
-    jcenter()
-}
-
 tasks.generateGrammarSource {
     maxHeapSize = "128m"
     arguments = arguments + listOf("-visitor", "-listener")
+}
+kotlin {
+    jvmToolchain(21)
 }
