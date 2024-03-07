@@ -35,7 +35,7 @@ logic:    logic '&&' logic
         | logic_expression
         ;
 
-logic_compare_operator: '<' | '>' | '<=' | '>=' | '==';
+logic_compare_operator: '<' | '>' | '<=' | '>=' | '==' | '/=';
 logic_expression: '(' expression ')' | name | value | arith;
 
 if_statement: 'if' expression 'then' expression 'else' expression;

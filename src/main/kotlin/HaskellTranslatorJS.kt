@@ -1,3 +1,4 @@
+import common.TabString
 import org.antlr.v4.runtime.tree.RuleNode
 import org.antlr.v4.runtime.tree.TerminalNode
 import org.largong.HaskellBaseVisitor
@@ -122,7 +123,14 @@ class HaskellTranslatorJS(val output: Writer): HaskellBaseVisitor<Any?>() {
         }
     }
 
-    override fun visitLogic_compare_operator(ctx: HaskellParser.Logic_compare_operatorContext?): Any? = flat(ctx)
+    override fun visitLogic_compare_operator(ctx: HaskellParser.Logic_compare_operatorContext?): Any? {
+        val value = flat<String>(ctx)
+        val convert = mapOf(
+            Pair("==", "==="),
+            Pair("/=", "!==")
+        )
+        return if (convert.containsKey(value)) convert[value]!! else value
+    }
 
     override fun visitArg(ctx: HaskellParser.ArgContext): Any? = flat(ctx)
 
@@ -160,7 +168,7 @@ class HaskellTranslatorJS(val output: Writer): HaskellBaseVisitor<Any?>() {
 class Function(
     val name: String,
     var header: Header? = null
-) {
+): TabString {
 
     private var maximumElements = 0
     private val statements: MutableList<Statement> = mutableListOf()
@@ -207,10 +215,9 @@ class Function(
         return current ?: throw IllegalStateException()
     }
 
-    override fun toString(): String {
-        val builder = StringBuilder()
-
-        builder.append("function $name(")
+    override fun tabString(builder: StringBuilder, tabs: Int) {
+        val t = "\t".repeat(tabs)
+        builder.append("${t}function $name(")
 
         if (header == null) {
             for (it in 0 until maximumElements) {
@@ -229,11 +236,12 @@ class Function(
         builder.append(") {\n")
 
         for (statement in statements) {
-            builder.append(statement)
+            statement.tabString(builder, tabs + 1)
         }
-        builder.append("}\n")
-        return builder.toString()
+        builder.append("$t}\n")
     }
+
+    override fun toString(): String = tabString(0)
 }
 
 data class Header(val args: List<Type>)
@@ -244,12 +252,20 @@ data class Body(
     val condition: Expression?,
     val expression: Expression)
 
-sealed interface Statement
+sealed interface Statement: TabString
 
 data class Return(
     val expr: Expression
 ): Statement {
-    override fun toString(): String = "return $expr;\n"
+    override fun tabString(builder: StringBuilder, tabs: Int) {
+        builder
+            .append("\t".repeat(tabs))
+            .append("return ")
+        expr.tabString(builder, tabs)
+        builder.append(";\n")
+    }
+
+    override fun toString(): String = tabString(0)
 }
 
 data class Let(
@@ -257,8 +273,17 @@ data class Let(
     val expr: Expression,
     val declaration: Boolean
 ): Statement {
-    override fun toString(): String =
-        (if (declaration) "let " else "") + "$name = $expr;\n"
+    override fun tabString(builder: StringBuilder, tabs: Int) {
+        builder.append("\t".repeat(tabs))
+        if (declaration) {
+            builder.append("let ")
+        }
+        builder.append("$name = ")
+        expr.tabString(builder, tabs)
+        builder.append(";\n")
+    }
+
+    override fun toString(): String = tabString(0)
 }
 
 data class IfStatement(
@@ -266,23 +291,28 @@ data class IfStatement(
     val ifTrue: List<Statement> = mutableListOf(),
     val ifFalse: List<Statement> = mutableListOf()
 ): Statement {
-    override fun toString(): String {
-        val builder = StringBuilder()
-        builder.append("if (").append(condition.toString()).append(") {\n")
+    override fun tabString(builder: StringBuilder, tabs: Int) {
+        val padding = "\t".repeat(tabs)
+        builder.append(padding).append("if (").append(condition.toString()).append(") {\n")
         for (it in ifTrue) {
-            builder.append(it.toString())
+            it.tabString(builder, tabs + 1)
         }
-        builder.append("} else {\n")
+        builder.append(padding).append("} else {\n")
         for (it in ifFalse) {
-            builder.append(it.toString())
+            it.tabString(builder, tabs + 1)
         }
-        builder.append("}\n")
+        builder.append(padding).append("}\n")
+    }
 
-        return builder.toString()
+    override fun toString(): String = tabString(0)
+}
+
+sealed interface Expression: TabString {
+    override fun tabString(builder: StringBuilder, tabs: Int) {
+        builder.append(toString())
     }
 }
 
-sealed interface Expression
 data class Operation(
     val left: Expression,
     val op: String,
